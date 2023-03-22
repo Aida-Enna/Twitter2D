@@ -1,16 +1,23 @@
-﻿using System;
+﻿using Imgur.API.Authentication;
+using Imgur.API.Endpoints;
+using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Mail;
 using System.Text.Json;
-using Newtonsoft.Json;
-using Tweetinvi.Core.Models;
+using System.Threading;
+using System.Threading.Tasks;
 using Tweetinvi.Models.V2;
+using Tweetinvi.Parameters.V2;
 
 namespace TwitterStreaming
 {
-    class PayloadDiscord
+    internal class PayloadDiscord
     {
         private class EntityContainer
         {
@@ -80,10 +87,10 @@ namespace TwitterStreaming
             Avatar = author.ProfileImageUrl;
 
             // TODO: Escape markdown
-            FormatTweet(tweet, author, tweetUrl);
+            FormatTweetAsync(tweet, author, tweetUrl);
         }
 
-        private void FormatTweet(TweetV2 tweet, UserV2 author, string tweetUrl)
+        private void FormatTweetAsync(TweetV2 tweet, UserV2 author, string tweetUrl)
         {
             try
             {
@@ -92,6 +99,8 @@ namespace TwitterStreaming
                 var text = tweet.Text;
                 var entities = new List<EntityContainer>();
                 var images = new List<Embed>();
+                bool isGIF = false;
+                string GIFImageURL = "";
 
                 if (tweet.Entities.Hashtags != null)
                 {
@@ -127,6 +136,7 @@ namespace TwitterStreaming
 
                 if (tweet.Attachments.MediaKeys != null)
                 {
+
                     var TweetResponse = Program.userClient.TweetsV2.GetTweetAsync(tweet.Id).Result;
                     foreach (var entity in tweet.Entities.Urls)
                     {
@@ -134,7 +144,6 @@ namespace TwitterStreaming
                         {
                             // Remove the short url from text
                             entity.ExpandedUrl = "";
-
 
                             if (!entities.Exists(x => x.Start == entity.Start))
                             {
@@ -149,14 +158,42 @@ namespace TwitterStreaming
                     }
                     foreach (MediaV2 MediaItem in TweetResponse.Includes.Media)
                     {
-                        images.Add(new Embed
+                        if (MediaItem.Type == "animated_gif")
                         {
-                            url = tweetUrl,
-                            image = new Embed.Image
+                            isGIF = true;
+                            string MP4Code = MediaItem.PreviewImageUrl.Replace("https://pbs.twimg.com/tweet_video_thumb/", "").Replace(".jpg", "");
+                            string MP4URL = "https://video.twimg.com/tweet_video/" + MP4Code + ".mp4";
+                            //https://pbs.twimg.com/tweet_video_thumb/Fr1WzSCXsAErDL8.jpg
+                            ProcessStartInfo FFMPEGInfo = new ProcessStartInfo()
                             {
-                                url = MediaItem.Url
-                            },
-                        });
+                                FileName = "ffmpeg",
+                                Arguments = "-i " + MP4URL + " " + tweet.Id + ".gif",
+                                UseShellExecute = true,
+                                WindowStyle = ProcessWindowStyle.Hidden,
+                                CreateNoWindow = true
+                            };
+                            Process.Start(FFMPEGInfo).WaitForExit();
+                            var apiClient = new ApiClient("b174fee539f0aee");
+                            var httpClient = new HttpClient();
+
+                            var filePath = tweet.Id + ".gif";
+                            using var fileStream = File.OpenRead(filePath);
+
+                            var imageEndpoint = new ImageEndpoint(apiClient, httpClient);
+                            var imageUpload = imageEndpoint.UploadImageAsync(fileStream);
+                            GIFImageURL = imageUpload.Result.Link;
+                        }
+                        else
+                        {
+                            images.Add(new Embed
+                            {
+                                url = tweetUrl,
+                                image = new Embed.Image
+                                {
+                                    url = MediaItem.Url
+                                },
+                            });
+                        }
                     }
                 }
 
@@ -235,18 +272,32 @@ namespace TwitterStreaming
                         icon_url = author.ProfileImageUrl,
                         url = tweetUrl,
                     },
+                    //image = new Embed.Image
+                    //{
+                    //    url = GIFImageURL
+                    //}
                 };
 
-                if (images.Any())
+                if (isGIF)
                 {
-                    embed.image = images[0].image;
-                    images.RemoveAt(0);
+                    embed.image = new Embed.Image
+                    {
+                        url = GIFImageURL
+                    };
+                }
+                else
+                {
+                    if (images.Any())
+                    {
+                        embed.image = images[0].image;
+                        images.RemoveAt(0);
+                    }
                 }
 
                 Embeds.Add(embed);
                 Embeds.AddRange(images);
             }
-            catch(Exception f)
+            catch (Exception f)
             {
                 Console.WriteLine("Something went wrong - " + f.ToString());
             }

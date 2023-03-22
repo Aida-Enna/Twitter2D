@@ -33,7 +33,7 @@ namespace TwitterStreaming
                 AllowAutoRedirect = false,
             });
             HttpClient.DefaultRequestHeaders.Add("User-Agent", "TwitterToWebhook");
-            HttpClient.Timeout = TimeSpan.FromSeconds(10);
+            HttpClient.Timeout = TimeSpan.FromSeconds(20);
         }
 
         public void Dispose()
@@ -113,7 +113,7 @@ namespace TwitterStreaming
                     Log.WriteError($"Exception caught: {ex}");
                 }
 
-                await Task.Delay(5000);
+                await Task.Delay(10000);
             }
             while (true);
         }
@@ -126,9 +126,23 @@ namespace TwitterStreaming
             {
                 if (matchedTweetReceivedEventArgs.Json.Contains("Too Many Requests"))
                 {
+                    TwitterStream.StopStream();
+                    TwitterStream.TweetReceived -= OnTweetReceived;
                     Log.WriteError($"We're sending too many requests! Let's try again in like... 5 minutes?");
                     Thread.Sleep(300000);
                     Log.WriteInfo("Let's try again!");
+                    TwitterStream.TweetReceived += OnTweetReceived;
+                    await StartTwitterStream();
+                }
+                else if(matchedTweetReceivedEventArgs.Json.Contains("TooManyConnections"))
+                {
+                    TwitterStream.StopStream();
+                    TwitterStream.TweetReceived -= OnTweetReceived;
+                    Log.WriteError($"We have too many concurrent connections?? Let's try again in like... 2 minutes?");
+                    Thread.Sleep(120000);
+                    Log.WriteInfo("Let's try again!");
+                    TwitterStream.TweetReceived += OnTweetReceived;
+                    await StartTwitterStream();
                 }
                 else
                 {
@@ -224,6 +238,7 @@ namespace TwitterStreaming
                 json = JsonConvert.SerializeObject(new PayloadGeneric(tweet, author, tweetUrl));
             }
 
+            Console.WriteLine(json);
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
