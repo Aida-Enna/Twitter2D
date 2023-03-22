@@ -179,24 +179,6 @@ namespace TwitterStreaming
                         else if (MediaItem.Type == "video")
                         {
                             Content = tweetUrl;
-                            //isMP4 = true;
-                            //var YTPProccess = new Process
-                            //{
-                            //    StartInfo = new ProcessStartInfo()
-                            //    {
-                            //        FileName = "yt-dlp",
-                            //        Arguments = "--get-url " + tweetUrl,
-                            //        UseShellExecute = false,
-                            //        WindowStyle = ProcessWindowStyle.Hidden,
-                            //        CreateNoWindow = true,
-                            //        RedirectStandardOutput = true,
-                            //    }
-                            //};
-                            //YTPProccess.Start();
-                            //while (!YTPProccess.StandardOutput.EndOfStream)
-                            //{
-                            //    MP4URL = YTPProccess.StandardOutput.ReadLine();
-                            //}
                             return;
                         }
                         else
