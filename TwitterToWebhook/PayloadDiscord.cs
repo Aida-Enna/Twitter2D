@@ -67,12 +67,6 @@ namespace TwitterStreaming
         [JsonProperty("embeds")]
         public List<Embed> Embeds { get; } = new();
 
-        //public PayloadDiscord(TweetV2 tweet, UserV2 author, string url, bool ignoreQuoteTweet)
-        //{
-        //    Username = $"New Tweet by @{author.Username}";
-        //    Avatar = author.ProfileImageUrl;
-        //    Content = url;
-        //}
         public PayloadDiscord(TweetV2 tweet, UserV2 author, string tweetUrl, string DisplayName)
         {
             if (!String.IsNullOrWhiteSpace(DisplayName))
@@ -272,10 +266,6 @@ namespace TwitterStreaming
                         icon_url = author.ProfileImageUrl,
                         url = tweetUrl,
                     },
-                    //image = new Embed.Image
-                    //{
-                    //    url = GIFImageURL
-                    //}
                 };
 
                 if (isGIF)
