@@ -8,12 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Mail;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Tweetinvi.Models.V2;
-using Tweetinvi.Parameters.V2;
 
 namespace TwitterStreaming
 {
@@ -95,6 +91,8 @@ namespace TwitterStreaming
                 var images = new List<Embed>();
                 bool isGIF = false;
                 string GIFImageURL = "";
+                bool isMP4 = false;
+                string MP4URL = "";
 
                 if (tweet.Entities.Hashtags != null)
                 {
@@ -130,7 +128,6 @@ namespace TwitterStreaming
 
                 if (tweet.Attachments.MediaKeys != null)
                 {
-
                     var TweetResponse = Program.userClient.TweetsV2.GetTweetAsync(tweet.Id).Result;
                     foreach (var entity in tweet.Entities.Urls)
                     {
@@ -156,18 +153,19 @@ namespace TwitterStreaming
                         {
                             isGIF = true;
                             string MP4Code = MediaItem.PreviewImageUrl.Replace("https://pbs.twimg.com/tweet_video_thumb/", "").Replace(".jpg", "");
-                            string MP4URL = "https://video.twimg.com/tweet_video/" + MP4Code + ".mp4";
-                            //https://pbs.twimg.com/tweet_video_thumb/Fr1WzSCXsAErDL8.jpg
+                            string GIFMP4URL = "https://video.twimg.com/tweet_video/" + MP4Code + ".mp4";
+                            //https://pbs.twimg.com/tweet_video/NDJLDjZC2cWXtRkV.mp4
+                            //NDJLDjZC2cWXtRkV
                             ProcessStartInfo FFMPEGInfo = new ProcessStartInfo()
                             {
                                 FileName = "ffmpeg",
-                                Arguments = "-i " + MP4URL + " " + tweet.Id + ".gif",
+                                Arguments = "-i " + GIFMP4URL + " " + tweet.Id + ".gif",
                                 UseShellExecute = true,
                                 WindowStyle = ProcessWindowStyle.Hidden,
                                 CreateNoWindow = true
                             };
                             Process.Start(FFMPEGInfo).WaitForExit();
-                            var apiClient = new ApiClient("b174fee539f0aee");
+                            var apiClient = new ApiClient(Program.config.ImgurToken);
                             var httpClient = new HttpClient();
 
                             var filePath = tweet.Id + ".gif";
@@ -176,6 +174,30 @@ namespace TwitterStreaming
                             var imageEndpoint = new ImageEndpoint(apiClient, httpClient);
                             var imageUpload = imageEndpoint.UploadImageAsync(fileStream);
                             GIFImageURL = imageUpload.Result.Link;
+                            File.Delete(tweet.Id + ".gif");
+                        }
+                        else if (MediaItem.Type == "video")
+                        {
+                            Content = tweetUrl;
+                            //isMP4 = true;
+                            //var YTPProccess = new Process
+                            //{
+                            //    StartInfo = new ProcessStartInfo()
+                            //    {
+                            //        FileName = "yt-dlp",
+                            //        Arguments = "--get-url " + tweetUrl,
+                            //        UseShellExecute = false,
+                            //        WindowStyle = ProcessWindowStyle.Hidden,
+                            //        CreateNoWindow = true,
+                            //        RedirectStandardOutput = true,
+                            //    }
+                            //};
+                            //YTPProccess.Start();
+                            //while (!YTPProccess.StandardOutput.EndOfStream)
+                            //{
+                            //    MP4URL = YTPProccess.StandardOutput.ReadLine();
+                            //}
+                            return;
                         }
                         else
                         {
@@ -263,9 +285,14 @@ namespace TwitterStreaming
                     author = new Embed.Author
                     {
                         name = AuthorInfo,
-                        icon_url = author.ProfileImageUrl,
+                        //icon_url = author.ProfileImageUrl,
                         url = tweetUrl,
                     },
+                    footer = new Embed.Footer
+                    {
+                        text = "Tweet created at " + tweet.CreatedAt.ToString("G") + " UTC",
+                        icon_url = "https://i.imgur.com/RJku9A1.png"
+                    }
                 };
 
                 if (isGIF)
@@ -273,6 +300,13 @@ namespace TwitterStreaming
                     embed.image = new Embed.Image
                     {
                         url = GIFImageURL
+                    };
+                }
+                else if(isMP4)
+                {
+                    embed.image = new Embed.Image
+                    {
+                        url = MP4URL
                     };
                 }
                 else

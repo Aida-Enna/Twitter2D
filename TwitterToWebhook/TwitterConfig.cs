@@ -16,6 +16,9 @@ namespace TwitterStreaming
         public string BearerToken { get; set; }
 
         [JsonProperty(Required = Required.Always)]
+        public string ImgurToken { get; set; }
+
+        [JsonProperty(Required = Required.Always)]
         public Dictionary<string, List<string>> AccountsToMonitor { get; set; }
 
         [JsonProperty(Required = Required.Always)]

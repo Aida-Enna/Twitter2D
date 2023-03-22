@@ -25,6 +25,7 @@ namespace TwitterStreaming
         private readonly HttpClient HttpClient;
         private IFilteredStreamV2 TwitterStream;
         public static TwitterClient userClient;
+        public static TwitterConfig config;
 
         public Program()
         {
@@ -45,7 +46,7 @@ namespace TwitterStreaming
         {
             var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
 
-            var config = JsonSerializer.Deserialize<TwitterConfig>(await File.ReadAllTextAsync(path), new JsonSerializerOptions
+            config = JsonSerializer.Deserialize<TwitterConfig>(await File.ReadAllTextAsync(path), new JsonSerializerOptions
             {
                 ReadCommentHandling = JsonCommentHandling.Skip,
                 AllowTrailingCommas = true,
