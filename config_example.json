@@ -7,9 +7,9 @@
 	"AccessSecret": "",
 	"AccountsToMonitor": {
 		//You can use twitter usernames for these
-		//Add [ and ] around them if you use multiple channels
+		//Add commas if you use multiple channels
 		//"weirdlilguys": [ "channel-to-send-to", "second-channel", "third-channel" ]
-		"weirdlilguys": "channel-to-send-to"
+		"weirdlilguys": [ "channel-to-send-to" ]
 	},
 	"DisplayNames": {
 		//The name to show when it posts to Discord
