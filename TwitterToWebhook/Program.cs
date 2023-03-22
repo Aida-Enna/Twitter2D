@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Tweetinvi;
@@ -126,7 +127,7 @@ namespace TwitterStreaming
                 if (matchedTweetReceivedEventArgs.Json.Contains("Too Many Requests"))
                 {
                     Log.WriteError($"We're sending too many requests! Let's try again in like... 5 minutes?");
-                    await Task.Delay(300000);
+                    Thread.Sleep(300000);
                     Log.WriteInfo("Let's try again!");
                 }
                 else
