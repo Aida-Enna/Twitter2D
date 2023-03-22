@@ -20,7 +20,7 @@ namespace TwitterStreaming
     class TwitterStreaming : IDisposable
     {
         private readonly Dictionary<string, List<Uri>> TwitterToChannels = new();
-        private readonly HashSet<string> AccountsToIgnoreRepliesFrom = new();
+        private readonly Dictionary<string, string> TwitterToDisplayName = new();
         private readonly HttpClient HttpClient;
         private IFilteredStreamV2 TwitterStream;
 
@@ -41,7 +41,7 @@ namespace TwitterStreaming
 
         public async Task Initialize()
         {
-            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "twitter.json");
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.json");
 
             var config = JsonSerializer.Deserialize<TwitterConfig>(await File.ReadAllTextAsync(path), new JsonSerializerOptions
             {
@@ -53,7 +53,7 @@ namespace TwitterStreaming
 
             TwitterStream = userClient.StreamsV2.CreateFilteredStream();
 
-            foreach (var (_, channels) in config.AccountsToFollow)
+            foreach (var (_, channels) in config.AccountsToMonitor)
             {
                 foreach (var channel in channels)
                 {
@@ -64,23 +64,19 @@ namespace TwitterStreaming
                 }
             }
 
-            var twitterUsers = await userClient.UsersV2.GetUsersByNameAsync(config.AccountsToFollow.Keys.ToArray());
+            var twitterUsers = await userClient.UsersV2.GetUsersByNameAsync(config.AccountsToMonitor.Keys.ToArray());
 
             var followers = new List<FilteredStreamRuleConfig>();
 
             foreach (var user in twitterUsers.Users)
             {
-                var channels = config.AccountsToFollow.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase));
-                var ignoreReplies = config.IgnoreReplies.Contains(user.Username, StringComparer.InvariantCultureIgnoreCase);
+                var channels = config.AccountsToMonitor.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase));
 
-                Log.WriteInfo($"Following @{user.Username} ({user.Id}){(ignoreReplies ? " (replies ignored)" : "")}");
+                Log.WriteInfo($"Following @{user.Username} ({user.Id})");
 
                 TwitterToChannels.Add(user.Id, channels.Value.Select(x => config.WebhookUrls[x]).ToList());
 
-                if (ignoreReplies)
-                {
-                    AccountsToIgnoreRepliesFrom.Add(user.Id);
-                }
+                TwitterToDisplayName.Add(user.Id, config.DisplayNames.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
 
                 followers.Add(new FilteredStreamRuleConfig($"from:{user.Id}"));
             }
@@ -134,6 +130,11 @@ namespace TwitterStreaming
             var author = matchedTweetReceivedEventArgs.Includes.Users.First(user => user.Id == tweet.AuthorId);
             var url = $"https://twitter.com/{author.Username}/status/{tweet.Id}";
 
+            if (tweet.ReferencedTweets != null || tweet.InReplyToUserId != null)
+            {
+                Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) (Reply/Retweet, skipped): {url}");
+            }
+
             // Skip tweets from accounts that are not monitored (quirk of how twitter streaming works)
             // TODO: Probably not needed in v2
             if (!TwitterToChannels.TryGetValue(tweet.AuthorId, out var endpoints))
@@ -142,42 +143,47 @@ namespace TwitterStreaming
                 return;
             }
 
-            // Skip replies unless replying to another monitored account
-            if (tweet.InReplyToUserId != null && AccountsToIgnoreRepliesFrom.Contains(tweet.AuthorId) && !TwitterToChannels.ContainsKey(tweet.InReplyToUserId))
+            if (!TwitterToDisplayName.TryGetValue(tweet.AuthorId, out string DisplayName))
             {
-                Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) replied to @_ ({tweet.InReplyToUserId}): {url}");
-                return;
+                DisplayName = "";
             }
 
-            // When retweeting a monitored account, do not send retweets to channels that original tweeter also sends to
-            if (tweet.ReferencedTweets != null)
-            {
-                foreach (var referencedTweet in tweet.ReferencedTweets)
-                {
-                    if (referencedTweet.Type == "retweeted")
-                    {
-                        var referencedTweetData = matchedTweetReceivedEventArgs.Includes.Tweets.FirstOrDefault(x => x.Id == referencedTweet.Id);
-                        var authorRetweeted = matchedTweetReceivedEventArgs.Includes.Users.First(user => user.Id == referencedTweetData.AuthorId);
-                        var urlRetweeted = $"https://twitter.com/{authorRetweeted.Username}/status/{referencedTweet.Id}";
+            //// Skip replies unless replying to another monitored account
+            //if (tweet.InReplyToUserId != null && !TwitterToChannels.ContainsKey(tweet.InReplyToUserId))
+            //{
+            //    Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) replied to @_ ({tweet.InReplyToUserId}): {url}");
+            //    return;
+            //}
 
-                        if (referencedTweetData != null && TwitterToChannels.TryGetValue(referencedTweetData.AuthorId, out var retweetEndpoints))
-                        {
-                            endpoints = endpoints.Except(retweetEndpoints).ToList();
+            //// When retweeting a monitored account, do not send retweets to channels that original tweeter also sends to
+            //if (tweet.ReferencedTweets != null)
+            //{
+            //    foreach (var referencedTweet in tweet.ReferencedTweets)
+            //    {
+            //        if (referencedTweet.Type == "retweeted")
+            //        {
+            //            var referencedTweetData = matchedTweetReceivedEventArgs.Includes.Tweets.FirstOrDefault(x => x.Id == referencedTweet.Id);
+            //            var authorRetweeted = matchedTweetReceivedEventArgs.Includes.Users.First(user => user.Id == referencedTweetData.AuthorId);
+            //            var urlRetweeted = $"https://twitter.com/{authorRetweeted.Username}/status/{referencedTweet.Id}";
 
-                            if (!endpoints.Any())
-                            {
-                                Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) retweeted @{authorRetweeted.Username} ({referencedTweetData.AuthorId}): {urlRetweeted}");
-                                return;
-                            }
-                        }
+            //            if (referencedTweetData != null && TwitterToChannels.TryGetValue(referencedTweetData.AuthorId, out var retweetEndpoints))
+            //            {
+            //                endpoints = endpoints.Except(retweetEndpoints).ToList();
 
-                        author = authorRetweeted;
-                        url = urlRetweeted;
+            //                if (!endpoints.Any())
+            //                {
+            //                    Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) retweeted @{authorRetweeted.Username} ({referencedTweetData.AuthorId}): {urlRetweeted}");
+            //                    return;
+            //                }
+            //            }
 
-                        break;
-                    }
-                }
-            }
+            //            author = authorRetweeted;
+            //            url = urlRetweeted;
+
+            //            break;
+            //        }
+            //    }
+            //}
 
 #if false
             // When quote-tweeting a monitored account, do not embed quoted tweet to channels that original tweeter also sends to
@@ -188,22 +194,20 @@ namespace TwitterStreaming
 
             Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) tweeted: ({tweet.Id}) {url}");
 
-            var ignoreQuoteTweet = false;
-
             foreach (var hookUrl in endpoints)
             {
-                await SendWebhook(hookUrl, tweet, author, url, ignoreQuoteTweet);
+                await SendWebhook(hookUrl, tweet, author, url, DisplayName);
             }
         }
 
-        private async Task SendWebhook(Uri url, TweetV2 tweet, UserV2 author, string tweetUrl, bool ignoreQuoteTweet)
+        private async Task SendWebhook(Uri url, TweetV2 tweet, UserV2 author, string tweetUrl, string DisplayName)
         {
             string json;
 
             if (url.Host == "discord.com")
             {
                 // If webhook target is Discord, convert it to a Discord compatible payload
-                json = JsonConvert.SerializeObject(new PayloadDiscord(tweet, author, tweetUrl, ignoreQuoteTweet));
+                json = JsonConvert.SerializeObject(new PayloadDiscord(tweet, author, tweetUrl, DisplayName));
             }
             else
             {

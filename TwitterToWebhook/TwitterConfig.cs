@@ -16,10 +16,10 @@ namespace TwitterStreaming
         public string BearerToken { get; set; }
 
         [JsonProperty(Required = Required.Always)]
-        public Dictionary<string, List<string>> AccountsToFollow { get; set; }
+        public Dictionary<string, List<string>> AccountsToMonitor { get; set; }
 
         [JsonProperty(Required = Required.Always)]
-        public HashSet<string> IgnoreReplies { get; set; }
+        public Dictionary<string, string> DisplayNames { get; set; }
 
         [JsonProperty(Required = Required.Always)]
         public Dictionary<string, Uri> WebhookUrls { get; set; }

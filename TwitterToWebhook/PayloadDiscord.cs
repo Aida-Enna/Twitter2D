@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using Newtonsoft.Json;
+using Tweetinvi.Core.Models;
 using Tweetinvi.Models.V2;
 
 namespace TwitterStreaming
@@ -56,213 +59,193 @@ namespace TwitterStreaming
         [JsonProperty("embeds")]
         public List<Embed> Embeds { get; } = new();
 
-        public PayloadDiscord(TweetV2 tweet, UserV2 author, string url, bool ignoreQuoteTweet)
+        //public PayloadDiscord(TweetV2 tweet, UserV2 author, string url, bool ignoreQuoteTweet)
+        //{
+        //    Username = $"New Tweet by @{author.Username}";
+        //    Avatar = author.ProfileImageUrl;
+        //    Content = url;
+        //}
+        public PayloadDiscord(TweetV2 tweet, UserV2 author, string tweetUrl, string DisplayName)
         {
-            Username = $"New Tweet by @{author.Username}";
-            Avatar = author.ProfileImageUrl;
-            Content = url;
-        }
-
-#if false
-        public PayloadDiscord(ITweet tweet, bool ignoreQuoteTweet)
-        {
-            Username = "New Tweet";
-
-            if (tweet.RetweetedTweet != null)
+            if (!String.IsNullOrWhiteSpace(DisplayName))
             {
-                Avatar = tweet.RetweetedTweet.CreatedBy.ProfileImageUrl;
+                Username = DisplayName;
             }
             else
             {
-                Avatar = tweet.CreatedBy.ProfileImageUrl;
+                Username = author.Username;
             }
+
+            Avatar = author.ProfileImageUrl;
 
             // TODO: Escape markdown
-            FormatTweet(tweet);
-
-            if (tweet.QuotedTweet != null && !ignoreQuoteTweet)
-            {
-                FormatTweet(tweet.QuotedTweet);
-            }
+            FormatTweet(tweet, author, tweetUrl);
         }
 
-        private void FormatTweet(ITweet tweet)
+        private void FormatTweet(TweetV2 tweet, UserV2 author, string tweetUrl)
         {
-            string author;
-
-            if (tweet.RetweetedTweet != null)
+            try
             {
-                author = $"{tweet.RetweetedTweet.CreatedBy.Name} (@{tweet.RetweetedTweet.CreatedBy.ScreenName}) (@{tweet.CreatedBy.ScreenName} retweeted)";
-                tweet = tweet.RetweetedTweet;
-            }
-            else
-            {
-                author = $"{tweet.CreatedBy.Name} (@{tweet.CreatedBy.ScreenName})";
-            }
+                string AuthorInfo = $"{author.Name} (@{author.Username})";
 
-            var text = tweet.FullText;
-            var entities = new List<EntityContainer>();
-            var images = new List<Embed>();
+                var text = tweet.Text;
+                var entities = new List<EntityContainer>();
+                var images = new List<Embed>();
 
-            if (tweet.Entities?.Urls != null)
-            {
-                foreach (var entity in tweet.Entities.Urls)
+                //if (tweet.Entities?.Urls != null)
+                //{
+                //    foreach (var entity in tweet.Entities.Urls)
+                //    {
+                //        if (!entities.Exists(x => x.Start == entity.Indices[0]))
+                //        {
+                //            entities.Add(new EntityContainer
+                //            {
+                //                Start = entity.Indices[0],
+                //                End = entity.Indices[1],
+                //                Replacement = entity.ExpandedURL,
+                //            });
+                //        }
+                //    }
+                //}
+
+                if (tweet.Entities.Hashtags != null)
                 {
-                    if (!entities.Exists(x => x.Start == entity.Indices[0]))
+                    foreach (var entity in tweet.Entities.Hashtags)
                     {
-                        entities.Add(new EntityContainer
+                        if (!entities.Exists(x => x.Start == entity.Start))
                         {
-                            Start = entity.Indices[0],
-                            End = entity.Indices[1],
-                            Replacement = entity.ExpandedURL,
-                        });
-                    }
-                }
-            }
-
-            if (tweet.Entities.Hashtags != null)
-            {
-                foreach (var entity in tweet.Entities.Hashtags)
-                {
-                    if (!entities.Exists(x => x.Start == entity.Indices[0]))
-                    {
-                        entities.Add(new EntityContainer
-                        {
-                            Start = entity.Indices[0],
-                            End = entity.Indices[1],
-                            Replacement = $"[#{entity.Text}](https://twitter.com/hashtag/{entity.Text})"
-                        });
-                    }
-                }
-            }
-
-            if (tweet.Entities.UserMentions != null)
-            {
-                foreach (var entity in tweet.Entities.UserMentions)
-                {
-                    if (!entities.Exists(x => x.Start == entity.Indices[0]))
-                    {
-                        entities.Add(new EntityContainer
-                        {
-                            Start = entity.Indices[0],
-                            End = entity.Indices[1],
-                            Replacement = $"[@{entity.ScreenName}](https://twitter.com/{entity.ScreenName})"
-                        });
-                    }
-                }
-            }
-
-            if (tweet.Entities?.Medias != null)
-            {
-                foreach (var entity in tweet.Entities.Medias)
-                {
-                    if (entity.MediaType is "photo" or "animated_gif" or "video")
-                    {
-                        images.Add(new Embed
-                        {
-                            url = tweet.Url,
-                            image = new Embed.Image
+                            entities.Add(new EntityContainer
                             {
-                                url = entity.MediaURLHttps,
-                            },
-                        });
-
-                        if (entity.MediaType is "photo" or "animated_gif")
-                        {
-                            // Remove the short url from text
-                            entity.ExpandedURL = "";
+                                Start = entity.Start,
+                                End = entity.End,
+                                Replacement = $"[#{entity.Tag}](https://twitter.com/hashtag/{entity.Tag})"
+                            });
                         }
-                    }
-
-                    if (!entities.Exists(x => x.Start == entity.Indices[0]))
-                    {
-                        entities.Add(new EntityContainer
-                        {
-                            Start = entity.Indices[0],
-                            End = entity.Indices[1],
-                            Replacement = entity.ExpandedURL,
-                        });
                     }
                 }
-            }
 
-            if (entities.Any())
-            {
-                entities = entities.OrderBy(e => e.Start).ToList();
-
-                var charIndex = 0;
-                var entityIndex = 0;
-                var codePointIndex = 0;
-                var entityCurrent = entities[0];
-
-                while (charIndex < text.Length)
+                if (tweet.Entities.Mentions != null)
                 {
-                    if (entityCurrent.Start == codePointIndex)
+                    foreach (var entity in tweet.Entities.Mentions)
                     {
-                        var len = entityCurrent.End - entityCurrent.Start;
-                        entityCurrent.Start = charIndex;
-                        entityCurrent.End = charIndex + len;
-
-                        entityIndex++;
-
-                        if (entityIndex == entities.Count)
+                        if (!entities.Exists(x => x.Start == entity.Start))
                         {
-                            // no more entity
-                            break;
+                            entities.Add(new EntityContainer
+                            {
+                                Start = entity.Start,
+                                End = entity.End,
+                                Replacement = $"[@{entity.Username}](https://twitter.com/{entity.Username})"
+                            });
+                        }
+                    }
+                }
+
+                //if (tweet.Attachments.MediaKeys.Count() > 0)
+                //{
+                //    foreach (var entity in tweet.Attachments.MediaKeys)
+                //    {
+                //        //if (entity.MediaType is "photo" or "animated_gif" or "video")
+                //        //{
+                //        //    images.Add(new Embed
+                //        //    {
+                //        //        url = tweet.Url,
+                //        //        image = new Embed.Image
+                //        //        {
+                //        //            url = entity.MediaURLHttps,
+                //        //        },
+                //        //    });
+
+                //        //    if (entity.MediaType is "photo" or "animated_gif")
+                //        //    {
+                //        //        // Remove the short url from text
+                //        //        entity.ExpandedURL = "";
+                //        //    }
+                //        //}
+
+                //        //if (!entities.Exists(x => x.Start == entity.Indices[0]))
+                //        //{
+                //        //    entities.Add(new EntityContainer
+                //        //    {
+                //        //        Start = entity.Indices[0],
+                //        //        End = entity.Indices[1],
+                //        //        Replacement = entity.ExpandedURL,
+                //        //    });
+                //        //}
+                //    }
+                //}
+
+                if (entities.Any())
+                {
+                    entities = entities.OrderBy(e => e.Start).ToList();
+
+                    var charIndex = 0;
+                    var entityIndex = 0;
+                    var codePointIndex = 0;
+                    var entityCurrent = entities[0];
+
+                    while (charIndex < text.Length)
+                    {
+                        if (entityCurrent.Start == codePointIndex)
+                        {
+                            var len = entityCurrent.End - entityCurrent.Start;
+                            entityCurrent.Start = charIndex;
+                            entityCurrent.End = charIndex + len;
+
+                            entityIndex++;
+
+                            if (entityIndex == entities.Count)
+                            {
+                                // no more entity
+                                break;
+                            }
+
+                            entityCurrent = entities[entityIndex];
                         }
 
-                        entityCurrent = entities[entityIndex];
-                    }
+                        if (charIndex < text.Length - 1 && char.IsSurrogatePair(text[charIndex], text[charIndex + 1]))
+                        {
+                            // Found surrogate pair
+                            charIndex++;
+                        }
 
-                    if (charIndex < text.Length - 1 && char.IsSurrogatePair(text[charIndex], text[charIndex + 1]))
-                    {
-                        // Found surrogate pair
+                        codePointIndex++;
                         charIndex++;
                     }
 
-                    codePointIndex++;
-                    charIndex++;
+                    foreach (var entity in entities.OrderByDescending(e => e.Start))
+                    {
+                        text = text[..entity.Start] + entity.Replacement + text[entity.End..];
+                    }
                 }
 
-                foreach (var entity in entities.OrderByDescending(e => e.Start))
+                text = WebUtility.HtmlDecode(text);
+
+                var embed = new Embed
                 {
-                    text = text[..entity.Start] + entity.Replacement + text[entity.End..];
-                }
-            }
-
-            text = WebUtility.HtmlDecode(text);
-
-            var embed = new Embed
-            {
-                url = tweet.Url,
-                color = 1941746,
-                description = text,
-                author = new Embed.Author
-                {
-                    name = author,
-                    icon_url = tweet.CreatedBy.ProfileImageUrl,
-                    url = tweet.Url,
-                },
-            };
-
-            if (images.Any())
-            {
-                embed.image = images[0].image;
-                images.RemoveAt(0);
-            }
-
-            if (tweet.QuotedTweet != null)
-            {
-                embed.footer = new Embed.Footer
-                {
-                    text = $"quoting @{tweet.QuotedTweet.CreatedBy.ScreenName}",
-                    icon_url = tweet.QuotedTweet.CreatedBy.ProfileImageUrl,
+                    url = tweetUrl,
+                    color = 1941746,
+                    description = text,
+                    author = new Embed.Author
+                    {
+                        name = AuthorInfo,
+                        icon_url = author.ProfileImageUrl,
+                        url = tweetUrl,
+                    },
                 };
-            }
 
-            Embeds.Add(embed);
-            Embeds.AddRange(images);
+                if (images.Any())
+                {
+                    embed.image = images[0].image;
+                    images.RemoveAt(0);
+                }
+
+                Embeds.Add(embed);
+                Embeds.AddRange(images);
+            }
+            catch(Exception f)
+            {
+                Console.WriteLine("Something went wrong - " + f.ToString());
+            }
         }
-#endif
     }
 }

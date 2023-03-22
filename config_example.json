@@ -1,0 +1,22 @@
+{
+	//You can get these from https://developer.twitter.com/en/portal/dashboard
+	"ConsumerKey": "",
+	"ConsumerSecret": "",
+	"BearerToken": "",
+	"AccessToken": "",
+	"AccessSecret": "",
+	"AccountsToMonitor": {
+		//You can use twitter usernames for these
+		//Add [ and ] around them if you use multiple channels
+		//"pso2alerts": [ "channel-to-send-to", "second-channel", "third-channel" ]
+		"pso2alerts": "channel-to-send-to"
+	},
+	"DisplayNames": {
+		//The name to show when it posts to Discord
+		"pso2alerts": "PSO2 Alerts (Meka)"
+	},
+	"WebhookUrls": {
+		//Discord webhooks will automatically be parsed as such, no need to specify
+		"channel-to-send-to": "http://www.example.com"
+	}
+}

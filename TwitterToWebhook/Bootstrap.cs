@@ -12,7 +12,7 @@ namespace TwitterStreaming
             var version = typeof(Bootstrap).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
             Log.WriteInfo($"Version: {version} - Runtime: {RuntimeInformation.FrameworkDescription}");
 
-            var expander = new TwitterStreaming();
+            var expander = new Program();
             await expander.Initialize();
             await expander.StartTwitterStream();
         }
