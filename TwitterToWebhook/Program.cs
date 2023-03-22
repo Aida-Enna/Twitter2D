@@ -17,14 +17,15 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace TwitterStreaming
 {
-    class TwitterStreaming : IDisposable
+    class Program : IDisposable
     {
         private readonly Dictionary<string, List<Uri>> TwitterToChannels = new();
         private readonly Dictionary<string, string> TwitterToDisplayName = new();
         private readonly HttpClient HttpClient;
         private IFilteredStreamV2 TwitterStream;
+        public static TwitterClient userClient;
 
-        public TwitterStreaming()
+        public Program()
         {
             HttpClient = new HttpClient(new HttpClientHandler
             {
@@ -49,7 +50,7 @@ namespace TwitterStreaming
                 AllowTrailingCommas = true,
             });
 
-            var userClient = new TwitterClient(config.ConsumerKey, config.ConsumerSecret, config.BearerToken);
+            userClient = new TwitterClient(config.ConsumerKey, config.ConsumerSecret, config.BearerToken);
 
             TwitterStream = userClient.StreamsV2.CreateFilteredStream();
 
@@ -122,8 +123,16 @@ namespace TwitterStreaming
 
             if (tweet == null)
             {
-                Log.WriteError($"Failed to receive tweet: {matchedTweetReceivedEventArgs.Json}");
-
+                if (matchedTweetReceivedEventArgs.Json.Contains("Too Many Requests"))
+                {
+                    Log.WriteError($"We're sending too many requests! Let's try again in like... 5 minutes?");
+                    await Task.Delay(300000);
+                    Log.WriteInfo("Let's try again!");
+                }
+                else
+                {
+                    Log.WriteError($"Failed to receive tweet: {matchedTweetReceivedEventArgs.Json}");
+                }
                 return;
             }
 

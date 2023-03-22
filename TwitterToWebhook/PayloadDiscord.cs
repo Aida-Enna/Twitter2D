@@ -42,6 +42,7 @@ namespace TwitterStreaming
             public string url { get; set; }
             public int color { get; set; }
             public string description { get; set; }
+            public string title { get; set; }
             public Author author { get; set; }
             public Footer footer { get; set; }
             public Image image { get; set; }
@@ -86,27 +87,11 @@ namespace TwitterStreaming
         {
             try
             {
-                string AuthorInfo = $"{author.Name} (@{author.Username})";
+                string AuthorInfo = $"@{author.Username}";
 
                 var text = tweet.Text;
                 var entities = new List<EntityContainer>();
                 var images = new List<Embed>();
-
-                //if (tweet.Entities?.Urls != null)
-                //{
-                //    foreach (var entity in tweet.Entities.Urls)
-                //    {
-                //        if (!entities.Exists(x => x.Start == entity.Indices[0]))
-                //        {
-                //            entities.Add(new EntityContainer
-                //            {
-                //                Start = entity.Indices[0],
-                //                End = entity.Indices[1],
-                //                Replacement = entity.ExpandedURL,
-                //            });
-                //        }
-                //    }
-                //}
 
                 if (tweet.Entities.Hashtags != null)
                 {
@@ -140,39 +125,57 @@ namespace TwitterStreaming
                     }
                 }
 
-                //if (tweet.Attachments.MediaKeys.Count() > 0)
-                //{
-                //    foreach (var entity in tweet.Attachments.MediaKeys)
-                //    {
-                //        //if (entity.MediaType is "photo" or "animated_gif" or "video")
-                //        //{
-                //        //    images.Add(new Embed
-                //        //    {
-                //        //        url = tweet.Url,
-                //        //        image = new Embed.Image
-                //        //        {
-                //        //            url = entity.MediaURLHttps,
-                //        //        },
-                //        //    });
+                if (tweet.Attachments.MediaKeys != null)
+                {
+                    var TweetResponse = Program.userClient.TweetsV2.GetTweetAsync(tweet.Id).Result;
+                    foreach (var entity in tweet.Entities.Urls)
+                    {
+                        if (entity.DisplayUrl.Contains("pic.twitter.com"))
+                        {
+                            // Remove the short url from text
+                            entity.ExpandedUrl = "";
 
-                //        //    if (entity.MediaType is "photo" or "animated_gif")
-                //        //    {
-                //        //        // Remove the short url from text
-                //        //        entity.ExpandedURL = "";
-                //        //    }
-                //        //}
 
-                //        //if (!entities.Exists(x => x.Start == entity.Indices[0]))
-                //        //{
-                //        //    entities.Add(new EntityContainer
-                //        //    {
-                //        //        Start = entity.Indices[0],
-                //        //        End = entity.Indices[1],
-                //        //        Replacement = entity.ExpandedURL,
-                //        //    });
-                //        //}
-                //    }
-                //}
+                            if (!entities.Exists(x => x.Start == entity.Start))
+                            {
+                                entities.Add(new EntityContainer
+                                {
+                                    Start = entity.Start,
+                                    End = entity.End,
+                                    Replacement = "",
+                                });
+                            }
+                        }
+                    }
+                    foreach (MediaV2 MediaItem in TweetResponse.Includes.Media)
+                    {
+                        images.Add(new Embed
+                        {
+                            url = tweetUrl,
+                            image = new Embed.Image
+                            {
+                                url = MediaItem.Url
+                            },
+                        });
+                    }
+                }
+
+                if (tweet.Entities?.Urls != null)
+                {
+                    foreach (var entity in tweet.Entities.Urls)
+                    {
+                        if (entity.DisplayUrl.Contains("pic.twitter.com")) { continue; }
+                        if (!entities.Exists(x => x.Start == entity.Start))
+                        {
+                            entities.Add(new EntityContainer
+                            {
+                                Start = entity.Start,
+                                End = entity.End,
+                                Replacement = entity.ExpandedUrl,
+                            });
+                        }
+                    }
+                }
 
                 if (entities.Any())
                 {
@@ -224,7 +227,8 @@ namespace TwitterStreaming
                 {
                     url = tweetUrl,
                     color = 1941746,
-                    description = text,
+                    description = text/*.Replace(tweetUrl + "/photo/1","")*/, //hacky, but it works
+                    title = $"{author.Name}",
                     author = new Embed.Author
                     {
                         name = AuthorInfo,
