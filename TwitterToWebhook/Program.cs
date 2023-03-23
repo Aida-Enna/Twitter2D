@@ -55,6 +55,9 @@ namespace TwitterStreaming
                 AllowTrailingCommas = true,
             });
 
+
+            Log.WriteError("Test error");
+
             userClient = new TwitterClient(config.ConsumerKey, config.ConsumerSecret, config.BearerToken);
 
             TwitterStream = userClient.StreamsV2.CreateFilteredStream();
@@ -65,7 +68,7 @@ namespace TwitterStreaming
                 {
                     if (!config.WebhookUrls.ContainsKey(webhook))
                     {
-                        throw new KeyNotFoundException($"Webhook \"{webhook}\" does not exist in WebhookUrls.");
+                        Log.WriteError($"Webhook \"{webhook}\" does not exist in WebhookUrls.");
                     }
                 }
             }

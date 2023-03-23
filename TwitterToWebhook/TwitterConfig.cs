@@ -18,6 +18,9 @@ namespace TwitterStreaming
         [JsonProperty(Required = Required.Always)]
         public string ImgurToken { get; set; }
 
+        [JsonProperty]
+        public string DebugWebhookURL { get; set; }
+
         [JsonProperty(Required = Required.Always)]
         public Dictionary<string, List<string>> AccountsToMonitor { get; set; }
 

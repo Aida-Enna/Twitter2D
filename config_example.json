@@ -5,18 +5,26 @@
 	"BearerToken": "",
 	"AccessToken": "",
 	"AccessSecret": "",
+	//You can get these from https://api.imgur.com/oauth2/addclient
+	"ImgurToken": "b174fee539f0aee",
+	//(Optional) The webhook to send errors to, will send nothing if blank
+	"DebugWebhookURL": "",
 	"AccountsToMonitor": {
 		//You can use twitter usernames for these
-		//Add commas if you use multiple webhooks
-		//"weirdlilguys": [ "example-webhook", "second-webhook", "third-webhook" ]
-		"weirdlilguys": [ "example-webhook" ]
+		//Add commas if you use multiple channels
+		//"weirdlilguys": [ "channel-to-send-to", "second-channel", "third-channel" ]
+		"weirdlilguys": [ "channel-to-send-to" ]
 	},
 	"DisplayNames": {
 		//The name to show when it posts to Discord
 		"weirdlilguys": "cats being weird (Twitter)"
 	},
+	"CustomMessages": {
+		//The message to send when it posts to Discord
+		"weirdlilguys": "Check out these cats being WEIRD LOL"
+	},
 	"WebhookUrls": {
 		//Discord webhooks will automatically be parsed as such, no need to specify
-		"example-webhook": "http://www.example.com"
+		"channel-to-send-to": "http://www.example.com"
 	}
 }
