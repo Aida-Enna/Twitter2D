@@ -1,21 +1,14 @@
 # TwitterToWebhook
 
-This is a very simple program that listens to Twitter stream and
-forwards tweets to a webhook url.
+This program listens to Twitter stream and forwards tweets to a webhook url, typically using a discord embed. Discord webhooks are natively supported.
 
-Discord webhooks are also natively supported.
+See `config_example.json` file for configuration.
 
-See `twitter.json` file for configuration.
+It also uses (Imgur)[http://www.imgur.com] to support GIF tweets and (FFmpeg)[https://ffmpeg.org/] to support MP4 tweets.
+You can get a free Imgur API key and then just make sure the ffmpeg binaries are accessible from the command prompt/bash and/or in the same place as the compiled DLL.
 
-## Payload
-
-POST request is sent to the configured url with the following JSON payload:
-
-```json
-{
-	"Type": "NewTweet",
-	"Username": "jack",
-	"Url": "https://twitter.com/jack/status/20",
-	"Avatar": "https://pbs.twimg.com/profile_images/1115644092329758721/AFjOr-K8_400x400.jpg",
-}
-```
+Current optional parameters:
+* Changing the display name for the webhook user
+* Sending a custom text message above the embed
+* Ignoring tweets that don't have a specified keyword in them
+* Sending error messages to a webhook
