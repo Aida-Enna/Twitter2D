@@ -141,7 +141,7 @@ namespace Twitter2D
             {
                 try
                 {
-                    Log.WriteInfo("Connecting to stream");
+                    Log.WriteInfo("Waiting for tweets...");
                     await TwitterStream.StartAsync();
                 }
                 catch (Exception ex)
