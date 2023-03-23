@@ -1,16 +1,14 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Tweetinvi;
 using Tweetinvi.Events.V2;
 using Tweetinvi.Models.V2;
@@ -20,7 +18,7 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Twitter2D
 {
-    class Program : IDisposable
+    internal class Program : IDisposable
     {
         private readonly Dictionary<string, List<Uri>> TwitterToWebhooks = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> TwitterToDisplayName = new(StringComparer.OrdinalIgnoreCase);
@@ -66,7 +64,9 @@ namespace Twitter2D
                 {
                     if (!config.WebhookUrls.ContainsKey(webhook))
                     {
-                        Log.WriteError($"Webhook \"{webhook}\" does not exist in WebhookUrls.");
+                        Log.WriteError($"Webhook \"{webhook}\" does not exist in WebhookUrls. Please check your config and restart the program. Press any key to exit.");
+                        Console.ReadKey();
+                        Environment.Exit(0);
                     }
                 }
             }
@@ -85,31 +85,33 @@ namespace Twitter2D
                 var webhooks = config.AccountsToMonitor.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase));
 
                 Log.WriteInfo($"Following @{user.Username} ({user.Id})");
-                if (config.DisplayNames.ContainsKey(user.Username))
+
+                TwitterToWebhooks.Add(user.Id, webhooks.Value.Select(x => config.WebhookUrls[x]).ToList());
+                WebHookCount++;
+
+                if (config.DisplayNames != null)
                 {
-                    TwitterToWebhooks.Add(user.Id, webhooks.Value.Select(x => config.WebhookUrls[x]).ToList());
-                    WebHookCount++;
+                    if (config.DisplayNames.ContainsKey(user.Username))
+                    {
+                        TwitterToDisplayName.Add(user.Id, config.DisplayNames.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
+                        DisplayNamesCount++;
+                    }
                 }
-                else
+                if (config.CustomMessages != null)
                 {
-                    Log.WriteError("Couldn't find a corresponding webhook for @" + user.Username + "! Please check your config and restart the program. Press any key to continue.");
-                    Console.ReadKey();
-                    Environment.Exit(0);
+                    if (config.CustomMessages.ContainsKey(user.Username))
+                    {
+                        TwitterCustomMessages.Add(user.Id, config.CustomMessages.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
+                        CustomMessagesCount++;
+                    }
                 }
-                if (config.DisplayNames.ContainsKey(user.Username))
+                if (config.RequiredKeywords != null)
                 {
-                    TwitterToDisplayName.Add(user.Id, config.DisplayNames.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
-                    DisplayNamesCount++;
-                }
-                if (config.CustomMessages.ContainsKey(user.Username))
-                {
-                    TwitterCustomMessages.Add(user.Id, config.CustomMessages.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
-                    CustomMessagesCount++;
-                }
-                if (config.RequiredKeywords.ContainsKey(user.Username))
-                {
-                    TwitterRequiredKeywords.Add(user.Id, config.RequiredKeywords.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
-                    RequiredKeywordsCount++;
+                    if (config.RequiredKeywords.ContainsKey(user.Username))
+                    {
+                        TwitterRequiredKeywords.Add(user.Id, config.RequiredKeywords.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
+                        RequiredKeywordsCount++;
+                    }
                 }
 
                 followers.Add(new FilteredStreamRuleConfig($"from:{user.Id}"));
@@ -168,7 +170,7 @@ namespace Twitter2D
                     TwitterStream.TweetReceived += OnTweetReceived;
                     await StartTwitterStream();
                 }
-                else if(matchedTweetReceivedEventArgs.Json.Contains("TooManyConnections"))
+                else if (matchedTweetReceivedEventArgs.Json.Contains("TooManyConnections"))
                 {
                     TwitterStream.StopStream();
                     TwitterStream.TweetReceived -= OnTweetReceived;
