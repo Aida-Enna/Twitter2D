@@ -25,6 +25,7 @@ namespace TwitterStreaming
         private readonly Dictionary<string, List<Uri>> TwitterToWebhooks = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, string> TwitterToDisplayName = new(StringComparer.OrdinalIgnoreCase);
         public static readonly Dictionary<string, string> TwitterCustomMessages = new(StringComparer.OrdinalIgnoreCase);
+        public static readonly Dictionary<string, string> TwitterRequiredKeywords = new(StringComparer.OrdinalIgnoreCase);
         private readonly HttpClient HttpClient;
         private IFilteredStreamV2 TwitterStream;
         public static TwitterClient userClient;
@@ -55,9 +56,6 @@ namespace TwitterStreaming
                 AllowTrailingCommas = true,
             });
 
-
-            Log.WriteError("Test error");
-
             userClient = new TwitterClient(config.ConsumerKey, config.ConsumerSecret, config.BearerToken);
 
             TwitterStream = userClient.StreamsV2.CreateFilteredStream();
@@ -80,6 +78,7 @@ namespace TwitterStreaming
             int WebHookCount = 0;
             int DisplayNamesCount = 0;
             int CustomMessagesCount = 0;
+            int RequiredKeywordsCount = 0;
 
             foreach (var user in twitterUsers.Users)
             {
@@ -107,10 +106,16 @@ namespace TwitterStreaming
                     TwitterCustomMessages.Add(user.Id, config.CustomMessages.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
                     CustomMessagesCount++;
                 }
+                if (config.RequiredKeywords.ContainsKey(user.Username))
+                {
+                    TwitterRequiredKeywords.Add(user.Id, config.RequiredKeywords.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
+                    RequiredKeywordsCount++;
+                }
+
                 followers.Add(new FilteredStreamRuleConfig($"from:{user.Id}"));
             }
 
-            Log.WriteInfo("Loaded " + WebHookCount + " webhook(s), " + DisplayNamesCount + " display name(s), and " + CustomMessagesCount + " custom message(s).");
+            Log.WriteInfo("Loaded " + WebHookCount + " webhook(s), " + DisplayNamesCount + " display name(s), " + CustomMessagesCount + " custom message(s), and " + RequiredKeywordsCount + " required keyword(s).");
 
             var rules = await userClient.StreamsV2.GetRulesForFilteredStreamV2Async();
 
@@ -186,6 +191,15 @@ namespace TwitterStreaming
             if (tweet.ReferencedTweets != null || tweet.InReplyToUserId != null)
             {
                 Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) (Reply/Retweet, skipped): {url}");
+                return;
+            }
+            if (Program.TwitterRequiredKeywords.TryGetValue(tweet.AuthorId, out string Keyword))
+            {
+                if (!tweet.Text.Contains(Keyword, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) (Did not contain keyword \"" + Keyword + "\", skipped): " + url);
+                    return;
+                }
             }
 
             // Skip tweets from accounts that are not monitored (quirk of how twitter streaming works)

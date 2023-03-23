@@ -31,6 +31,9 @@ namespace TwitterStreaming
         public Dictionary<string, string> CustomMessages { get; set; }
 
         [JsonProperty(Required = Required.Always)]
+        public Dictionary<string, string> RequiredKeywords { get; set; }
+
+        [JsonProperty(Required = Required.Always)]
         public Dictionary<string, Uri> WebhookUrls { get; set; }
     }
 }

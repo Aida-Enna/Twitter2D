@@ -16,12 +16,17 @@
 		"weirdlilguys": [ "channel-to-send-to" ]
 	},
 	"DisplayNames": {
-		//The name to show when it posts to Discord
+		//(Optional) The name to show when it posts to Discord
 		"weirdlilguys": "cats being weird (Twitter)"
 	},
 	"CustomMessages": {
-		//The message to send when it posts to Discord
+		//(Optional) The message to send when it posts to Discord
 		"weirdlilguys": "Check out these cats being WEIRD LOL"
+	},
+	"RequiredKeywords": {
+		//(Optional) A word that is required for the tweet to actually be posted
+		//If the tweet does not contain this word (including in a substring), it will logged and ignored
+		"weirdlilguys": "mlem"
 	},
 	"WebhookUrls": {
 		//Discord webhooks will automatically be parsed as such, no need to specify
