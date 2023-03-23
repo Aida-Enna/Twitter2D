@@ -94,6 +94,11 @@ namespace TwitterStreaming
                 bool isMP4 = false;
                 string MP4URL = "";
 
+                if (!Program.TwitterCustomMessages.TryGetValue(tweet.AuthorId, out string Message))
+                {
+                    Content = Message;
+                }
+
                 if (tweet.Entities.Hashtags != null)
                 {
                     foreach (var entity in tweet.Entities.Hashtags)
@@ -147,6 +152,7 @@ namespace TwitterStreaming
                             }
                         }
                     }
+
                     foreach (MediaV2 MediaItem in TweetResponse.Includes.Media)
                     {
                         if (MediaItem.Type == "animated_gif")
@@ -178,7 +184,14 @@ namespace TwitterStreaming
                         }
                         else if (MediaItem.Type == "video")
                         {
-                            Content = tweetUrl;
+                            if (!Program.TwitterCustomMessages.TryGetValue(tweet.AuthorId, out Message))
+                            {
+                                Content = tweetUrl;
+                            }
+                            else
+                            {
+                                Content = Message + tweetUrl;
+                            }
                             return;
                         }
                         else

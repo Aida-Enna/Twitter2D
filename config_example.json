@@ -7,9 +7,9 @@
 	"AccessSecret": "",
 	"AccountsToMonitor": {
 		//You can use twitter usernames for these
-		//Add commas if you use multiple channels
-		//"weirdlilguys": [ "channel-to-send-to", "second-channel", "third-channel" ]
-		"weirdlilguys": [ "channel-to-send-to" ]
+		//Add commas if you use multiple webhooks
+		//"weirdlilguys": [ "example-webhook", "second-webhook", "third-webhook" ]
+		"weirdlilguys": [ "example-webhook" ]
 	},
 	"DisplayNames": {
 		//The name to show when it posts to Discord
@@ -17,6 +17,6 @@
 	},
 	"WebhookUrls": {
 		//Discord webhooks will automatically be parsed as such, no need to specify
-		"channel-to-send-to": "http://www.example.com"
+		"example-webhook": "http://www.example.com"
 	}
 }

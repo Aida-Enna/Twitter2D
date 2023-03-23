@@ -4,11 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Tweetinvi;
 using Tweetinvi.Events.V2;
 using Tweetinvi.Models.V2;
@@ -20,8 +22,9 @@ namespace TwitterStreaming
 {
     class Program : IDisposable
     {
-        private readonly Dictionary<string, List<Uri>> TwitterToChannels = new();
-        private readonly Dictionary<string, string> TwitterToDisplayName = new();
+        private readonly Dictionary<string, List<Uri>> TwitterToWebhooks = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> TwitterToDisplayName = new(StringComparer.OrdinalIgnoreCase);
+        public static readonly Dictionary<string, string> TwitterCustomMessages = new(StringComparer.OrdinalIgnoreCase);
         private readonly HttpClient HttpClient;
         private IFilteredStreamV2 TwitterStream;
         public static TwitterClient userClient;
@@ -56,13 +59,13 @@ namespace TwitterStreaming
 
             TwitterStream = userClient.StreamsV2.CreateFilteredStream();
 
-            foreach (var (_, channels) in config.AccountsToMonitor)
+            foreach (var (_, webhooks) in config.AccountsToMonitor)
             {
-                foreach (var channel in channels)
+                foreach (var webhook in webhooks)
                 {
-                    if (!config.WebhookUrls.ContainsKey(channel))
+                    if (!config.WebhookUrls.ContainsKey(webhook))
                     {
-                        throw new KeyNotFoundException($"Channel \"{channel}\" does not exist in WebhookUrls.");
+                        throw new KeyNotFoundException($"Webhook \"{webhook}\" does not exist in WebhookUrls.");
                     }
                 }
             }
@@ -71,18 +74,40 @@ namespace TwitterStreaming
 
             var followers = new List<FilteredStreamRuleConfig>();
 
+            int WebHookCount = 0;
+            int DisplayNamesCount = 0;
+            int CustomMessagesCount = 0;
+
             foreach (var user in twitterUsers.Users)
             {
-                var channels = config.AccountsToMonitor.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase));
+                var webhooks = config.AccountsToMonitor.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase));
 
                 Log.WriteInfo($"Following @{user.Username} ({user.Id})");
-
-                TwitterToChannels.Add(user.Id, channels.Value.Select(x => config.WebhookUrls[x]).ToList());
-
-                TwitterToDisplayName.Add(user.Id, config.DisplayNames.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
-
+                if (config.DisplayNames.ContainsKey(user.Username))
+                {
+                    TwitterToWebhooks.Add(user.Id, webhooks.Value.Select(x => config.WebhookUrls[x]).ToList());
+                    WebHookCount++;
+                }
+                else
+                {
+                    Log.WriteError("Couldn't find a corresponding webhook for @" + user.Username + "! Please check your config and restart the program. Press any key to continue.");
+                    Console.ReadKey();
+                    Environment.Exit(0);
+                }
+                if (config.DisplayNames.ContainsKey(user.Username))
+                {
+                    TwitterToDisplayName.Add(user.Id, config.DisplayNames.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
+                    DisplayNamesCount++;
+                }
+                if (config.CustomMessages.ContainsKey(user.Username))
+                {
+                    TwitterCustomMessages.Add(user.Id, config.CustomMessages.First(u => u.Key.Equals(user.Username, StringComparison.OrdinalIgnoreCase)).Value);
+                    CustomMessagesCount++;
+                }
                 followers.Add(new FilteredStreamRuleConfig($"from:{user.Id}"));
             }
+
+            Log.WriteInfo("Loaded " + WebHookCount + " webhook(s), " + DisplayNamesCount + " display name(s), and " + CustomMessagesCount + " custom message(s).");
 
             var rules = await userClient.StreamsV2.GetRulesForFilteredStreamV2Async();
 
@@ -162,7 +187,7 @@ namespace TwitterStreaming
 
             // Skip tweets from accounts that are not monitored (quirk of how twitter streaming works)
             // TODO: Probably not needed in v2
-            if (!TwitterToChannels.TryGetValue(tweet.AuthorId, out var endpoints))
+            if (!TwitterToWebhooks.TryGetValue(tweet.AuthorId, out var endpoints))
             {
                 Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) (skipped): {url}");
                 return;
@@ -172,50 +197,6 @@ namespace TwitterStreaming
             {
                 DisplayName = "";
             }
-
-            //// Skip replies unless replying to another monitored account
-            //if (tweet.InReplyToUserId != null && !TwitterToChannels.ContainsKey(tweet.InReplyToUserId))
-            //{
-            //    Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) replied to @_ ({tweet.InReplyToUserId}): {url}");
-            //    return;
-            //}
-
-            //// When retweeting a monitored account, do not send retweets to channels that original tweeter also sends to
-            //if (tweet.ReferencedTweets != null)
-            //{
-            //    foreach (var referencedTweet in tweet.ReferencedTweets)
-            //    {
-            //        if (referencedTweet.Type == "retweeted")
-            //        {
-            //            var referencedTweetData = matchedTweetReceivedEventArgs.Includes.Tweets.FirstOrDefault(x => x.Id == referencedTweet.Id);
-            //            var authorRetweeted = matchedTweetReceivedEventArgs.Includes.Users.First(user => user.Id == referencedTweetData.AuthorId);
-            //            var urlRetweeted = $"https://twitter.com/{authorRetweeted.Username}/status/{referencedTweet.Id}";
-
-            //            if (referencedTweetData != null && TwitterToChannels.TryGetValue(referencedTweetData.AuthorId, out var retweetEndpoints))
-            //            {
-            //                endpoints = endpoints.Except(retweetEndpoints).ToList();
-
-            //                if (!endpoints.Any())
-            //                {
-            //                    Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) retweeted @{authorRetweeted.Username} ({referencedTweetData.AuthorId}): {urlRetweeted}");
-            //                    return;
-            //                }
-            //            }
-
-            //            author = authorRetweeted;
-            //            url = urlRetweeted;
-
-            //            break;
-            //        }
-            //    }
-            //}
-
-#if false
-            // When quote-tweeting a monitored account, do not embed quoted tweet to channels that original tweeter also sends to
-            var ignoreQuoteTweet = tweet.QuotedTweet != null
-                && TwitterToChannels.TryGetValue(tweet.QuotedTweet.CreatedBy.Id, out var quoteTweetEndpoints)
-                && !endpoints.Except(quoteTweetEndpoints).Any();
-#endif
 
             Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) tweeted: ({tweet.Id}) {url}");
 
