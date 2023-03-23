@@ -280,7 +280,7 @@ namespace Twitter2D
                     author = new Embed.Author
                     {
                         name = AuthorInfo,
-                        //icon_url = author.ProfileImageUrl,
+                        icon_url = author.ProfileImageUrl,
                         url = tweetUrl,
                     },
                     footer = new Embed.Footer
