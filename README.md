@@ -1,4 +1,4 @@
-# TwitterToWebhook
+# Twitter2D (Twitter to Discord)
 
 This program listens to Twitter stream and forwards tweets to a webhook url, typically using a discord embed. Discord webhooks are natively supported.
 
@@ -13,3 +13,5 @@ Current optional parameters:
 * Sending a custom text message above the embed
 * Ignoring tweets that don't have a specified keyword in them
 * Sending error messages to a webhook
+
+[Original TwitterToWebhook example by xPaw](https://github.com/xPaw/TwitterToWebhook)
