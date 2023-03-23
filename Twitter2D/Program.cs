@@ -18,7 +18,7 @@ using Tweetinvi.Parameters.V2;
 using Tweetinvi.Streaming.V2;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace TwitterStreaming
+namespace Twitter2D
 {
     class Program : IDisposable
     {
@@ -204,7 +204,7 @@ namespace TwitterStreaming
 
             // Skip tweets from accounts that are not monitored (quirk of how twitter streaming works)
             // TODO: Probably not needed in v2
-            if (!Twitter2Ds.TryGetValue(tweet.AuthorId, out var endpoints))
+            if (!TwitterToWebhooks.TryGetValue(tweet.AuthorId, out var endpoints))
             {
                 Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) (skipped): {url}");
                 return;

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace TwitterStreaming
+namespace Twitter2D
 {
     class TwitterConfig
     {

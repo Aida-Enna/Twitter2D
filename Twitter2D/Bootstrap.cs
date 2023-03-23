@@ -3,7 +3,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace TwitterStreaming
+namespace Twitter2D
 {
     static class Bootstrap
     {

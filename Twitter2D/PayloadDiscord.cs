@@ -11,7 +11,7 @@ using System.Net.Http;
 using System.Text.Json;
 using Tweetinvi.Models.V2;
 
-namespace TwitterStreaming
+namespace Twitter2D
 {
     internal class PayloadDiscord
     {

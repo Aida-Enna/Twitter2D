@@ -1,6 +1,6 @@
 ﻿using Tweetinvi.Models.V2;
 
-namespace TwitterStreaming
+namespace Twitter2D
 {
     class PayloadGeneric
     {

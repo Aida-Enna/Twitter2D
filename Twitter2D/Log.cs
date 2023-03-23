@@ -7,7 +7,7 @@ using System.Net;
 using Tweetinvi.Core.Models;
 using Tweetinvi;
 
-namespace TwitterStreaming
+namespace Twitter2D
 {
     static class Log
     {
