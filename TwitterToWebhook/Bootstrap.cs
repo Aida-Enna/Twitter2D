@@ -11,7 +11,14 @@ namespace TwitterStreaming
         {
             var version = typeof(Bootstrap).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
             Log.WriteInfo($"Version: {version} - Runtime: {RuntimeInformation.FrameworkDescription}");
-
+            Console.ForegroundColor = ConsoleColor.Blue;
+            Console.WriteLine("████████╗██╗    ██╗██╗████████╗████████╗███████╗██████╗ ██████╗ ██████╗ ");
+            Console.WriteLine("╚══██╔══╝██║    ██║██║╚══██╔══╝╚══██╔══╝██╔════╝██╔══██╗╚════██╗██╔══██╗");
+            Console.WriteLine("   ██║   ██║ █╗ ██║██║   ██║      ██║   █████╗  ██████╔╝ █████╔╝██║  ██║");
+            Console.WriteLine("   ██║   ██║███╗██║██║   ██║      ██║   ██╔══╝  ██╔══██╗██╔═══╝ ██║  ██║");
+            Console.WriteLine("   ██║   ╚███╔███╔╝██║   ██║      ██║   ███████╗██║  ██║███████╗██████╔╝");
+            Console.WriteLine("   ╚═╝    ╚══╝╚══╝ ╚═╝   ╚═╝      ╚═╝   ╚══════╝╚═╝  ╚═╝╚══════╝╚═════╝ ");
+            Console.ForegroundColor = ConsoleColor.White;
             var expander = new Program();
             await expander.Initialize();
             await expander.StartTwitterStream();

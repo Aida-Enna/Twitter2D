@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30711.63
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33326.253
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TwitterToWebhook", "TwitterToWebhook\TwitterToWebhook.csproj", "{90361609-188D-4059-B109-A90980FD7FD3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Twitter2D", "TwitterToWebhook\Twitter2D.csproj", "{90361609-188D-4059-B109-A90980FD7FD3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -2,10 +2,10 @@
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
     <OutputType>Exe</OutputType>
-    <Authors>xPaw</Authors>
+    <Authors>Aida Enna (Original code by xPaw)</Authors>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/xPaw/TwitterToWebhook</RepositoryUrl>
-    <PackageLicenseUrl>https://github.com/xPaw/TwitterToWebhook/blob/master/LICENSE</PackageLicenseUrl>
+    <RepositoryUrl>https://github.com/Aida-Enna/Twitter2D</RepositoryUrl>
+    <PackageLicenseUrl>https://github.com/Aida-Enna/Twitter2D/blob/master/LICENSE</PackageLicenseUrl>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>

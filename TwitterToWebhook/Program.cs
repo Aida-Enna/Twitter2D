@@ -37,7 +37,7 @@ namespace TwitterStreaming
             {
                 AllowAutoRedirect = false,
             });
-            HttpClient.DefaultRequestHeaders.Add("User-Agent", "TwitterToWebhook");
+            HttpClient.DefaultRequestHeaders.Add("User-Agent", "Twitter2D");
             HttpClient.Timeout = TimeSpan.FromSeconds(20);
         }
 
@@ -204,7 +204,7 @@ namespace TwitterStreaming
 
             // Skip tweets from accounts that are not monitored (quirk of how twitter streaming works)
             // TODO: Probably not needed in v2
-            if (!TwitterToWebhooks.TryGetValue(tweet.AuthorId, out var endpoints))
+            if (!Twitter2Ds.TryGetValue(tweet.AuthorId, out var endpoints))
             {
                 Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) (skipped): {url}");
                 return;
@@ -215,7 +215,7 @@ namespace TwitterStreaming
                 DisplayName = "";
             }
 
-            Log.WriteInfo($"@{author.Username} ({tweet.AuthorId}) tweeted: ({tweet.Id}) {url}");
+            Log.WriteInfo($"@{author.Username} tweeted {url}");
 
             foreach (var hookUrl in endpoints)
             {

@@ -38,7 +38,7 @@ namespace TwitterStreaming
                     {
                         WebClient client = new WebClient();
                         client.Headers.Add("Content-Type", "application/json");
-                        string payload = "{\"content\": \"" + "```TwitterToWebhook: " + logLine.Replace("\r\n","") + "```\"}";
+                        string payload = "{\"content\": \"" + "```Twitter2D: " + logLine.Replace("\r\n","") + "```\"}";
                         client.UploadData(Program.config.DebugWebhookURL, Encoding.UTF8.GetBytes(payload));
                     }    
                 }
