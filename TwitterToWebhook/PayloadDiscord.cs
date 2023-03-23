@@ -94,7 +94,7 @@ namespace TwitterStreaming
                 bool isMP4 = false;
                 string MP4URL = "";
 
-                if (!Program.TwitterCustomMessages.TryGetValue(tweet.AuthorId, out string Message))
+                if (Program.TwitterCustomMessages.TryGetValue(tweet.AuthorId, out string Message))
                 {
                     Content = Message;
                 }
