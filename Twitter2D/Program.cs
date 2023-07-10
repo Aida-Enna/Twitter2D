@@ -149,7 +149,7 @@ namespace Twitter2D
                     Log.WriteError($"Exception caught: {ex}");
                 }
 
-                await Task.Delay(10000);
+                await Task.Delay(30000);
             }
             while (true);
         }

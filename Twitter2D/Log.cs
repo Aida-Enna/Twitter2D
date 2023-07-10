@@ -26,6 +26,8 @@ namespace Twitter2D
         {
             var logLine = $"{DateTime.Now.ToString("s").Replace('T', ' ')} [{category}] {format}{Environment.NewLine}";
 
+            //File.AppendAllText("Twitter2DLog.txt", logLine);
+
             lock (logLock)
             {
                 if (category == Category.ERROR)
